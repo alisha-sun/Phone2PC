@@ -1,25 +1,42 @@
 package com.example.app;
-import java.net.Socket;
-import java.io.OutputStream;
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
+import java.util.Enumeration;
+
 public class ConnectionManager {
-    public static boolean connectToPC(String host){
-        try {
-            System.out.println("TryConnect: " + host);
-            Socket socket = new Socket(host, 5000);
-            OutputStream out = socket.getOutputStream();
+    private static final int PORT = 5001;
+    private static final byte[] DATA = "PHONE2PC_DISCOVER".getBytes(StandardCharsets.UTF_8);
 
-            byte[] data = new byte[4096];
+    public static int sendBroadcast() {
+        Enumeration<NetworkInterface> interfaces;
 
-            out.write(data);
-            out.flush();
+        try (DatagramSocket socket = new DatagramSocket()) {
+            interfaces = NetworkInterface.getNetworkInterfaces();
+            socket.setBroadcast(true);
 
-            System.out.println("Sent 4096 bytes");
-
-            socket.close();
-            return true;
-        } catch (Exception e) {
+            int count = 0;
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface networkInterface = interfaces.nextElement();
+                for (InterfaceAddress address : networkInterface.getInterfaceAddresses()) {
+                    InetAddress broadcastAddress = address.getBroadcast();
+                    if (broadcastAddress instanceof Inet4Address) {
+                        DatagramPacket packet = new DatagramPacket(DATA, DATA.length, broadcastAddress, PORT);
+                        try { socket.send(packet); count++; }
+                        catch (IOException e) { e.printStackTrace(); }
+                    }
+                }
+            }
+            return count;
+        } catch (SocketException e){
             e.printStackTrace();
-            return false;
+            return -1;
         }
     }
 }

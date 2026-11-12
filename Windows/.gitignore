@@ -2,6 +2,10 @@
 
 *.exe
 *.obj
-*.vcxproj.user
 
+*.vcxproj.user
 **/.vs/
+
+DiscoveryServer/.*
+
+*.class

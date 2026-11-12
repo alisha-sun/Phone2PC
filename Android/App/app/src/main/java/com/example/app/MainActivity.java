@@ -9,12 +9,13 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        EditText input = findViewById(R.id.input);
         Button button = findViewById(R.id.submit);
+
         button.setOnClickListener(v -> {
-            String text = input.getText().toString();
             Thread thread = new Thread(() -> {
-                ConnectionManager.connectToPC(text);
+                System.out.println(
+                    "Broadcast count: "  + ConnectionManager.sendBroadcast()
+                );
             });
             thread.start();
         });

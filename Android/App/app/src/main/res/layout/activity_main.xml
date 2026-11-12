@@ -5,11 +5,6 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp">
-    <EditText
-        android:id="@+id/input"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Enter host IP address" />
     <Button
         android:id="@+id/submit"
         android:layout_width="wrap_content"
