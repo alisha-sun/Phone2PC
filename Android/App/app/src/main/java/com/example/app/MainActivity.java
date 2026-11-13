@@ -1,7 +1,8 @@
 package com.example.app;
 import android.app.Activity;
 import android.os.Bundle;
-import android.widget.*;
+
+import networking.ConnectionManager;
 
 public class MainActivity extends Activity {
     @Override
@@ -9,14 +10,11 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button button = findViewById(R.id.submit);
+        Thread listener = new Thread(ConnectionManager::listenForResponse);
+        listener.start();
 
-        button.setOnClickListener(v -> {
-            Thread thread = new Thread(() -> {
-                System.out.println(
-                    "Broadcast count: "  + ConnectionManager.sendBroadcast()
-                );
-            });
+        findViewById(R.id.connect).setOnClickListener(  v -> {
+            Thread thread = new Thread(() -> System.out.println("Broadcast count: "  + ConnectionManager.sendBroadcast()) );
             thread.start();
         });
     }
