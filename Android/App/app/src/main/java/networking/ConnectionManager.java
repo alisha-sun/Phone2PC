@@ -45,10 +45,10 @@ public class ConnectionManager {
         ).start();
     }
 
-    public static void startListening(){
+    public static void startListening(Runnable onSuccess){
         if (listener != null && listener.isAlive()) return;
         pcSocket = null;
-        listener = new Thread(ConnectionManager::listenForResponse);
+        listener = new Thread(() -> { if (ConnectionManager.listenForResponse()) onSuccess.run(); });
         listener.start();
     }
 
