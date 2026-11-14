@@ -1,7 +1,7 @@
-﻿
-#include <winsock2.h>
+﻿#include <winsock2.h>
 #include <ws2tcpip.h>
 #include <iostream>
+#include <cstring>
 
 const int PORT = 5001;
 const char* RESPONSE = "PHONE2PC_STOP-YELLING";
@@ -35,7 +35,19 @@ int main(int argc, char* argv[]) {
 		return 1;
     }
 
-    while (true) {}
+    char buffer[1024];
+    while (true) {
+        int result = recv(clientSocket, buffer, sizeof(buffer), 0);
+        if (result == 0) {
+			std::cout << "Connection closed\n";
+            break;
+        } else if (result == SOCKET_ERROR) {
+            std::cout << "Connection error: " << WSAGetLastError() << '\n';
+            break;
+        }
+
+        // ...
+    }
 
     closesocket(clientSocket);
     WSACleanup();
