@@ -21,47 +21,50 @@ public class ConnectionManager {
     private static final byte[] DATA = "PHONE2PC_DISCOVER".getBytes(StandardCharsets.UTF_8);
     private static final byte[] RESPONSE = "PHONE2PC_STOP-YELLING".getBytes(StandardCharsets.UTF_8);
 
-
+    private static Thread listener = null;
     private static volatile Socket pcSocket = null;
 
-    public static int sendBroadcast() {
-        Enumeration<NetworkInterface> interfaces;
 
-        try (DatagramSocket socket = new DatagramSocket()) {
-            interfaces = NetworkInterface.getNetworkInterfaces();
-            socket.setBroadcast(true);
+    /* PUBLIC */
 
-            int count = 0;
-            while (interfaces.hasMoreElements()) {
-                NetworkInterface networkInterface = interfaces.nextElement();
-                for (InterfaceAddress address : networkInterface.getInterfaceAddresses()) {
-                    InetAddress broadcastAddress = address.getBroadcast();
-                    if (broadcastAddress instanceof Inet4Address) {
-                        DatagramPacket packet = new DatagramPacket(DATA, DATA.length, broadcastAddress, PORT);
-                        try { socket.send(packet); count++; }
-                        catch (IOException e) { e.printStackTrace(); }
-                    }
+    public static void sendBroadcast() {
+        new Thread(() -> {
+                Enumeration<NetworkInterface> interfaces;
+                int count = 0;
+
+                try (DatagramSocket socket = new DatagramSocket()) {
+                    socket.setBroadcast(true);
+                    interfaces = NetworkInterface.getNetworkInterfaces();
+                    while (interfaces.hasMoreElements()) count += broadcastTo(interfaces.nextElement(), socket);
+                } catch (SocketException e) {
+                    e.printStackTrace();
+                    count = -1;
                 }
+                System.out.println("Broadcast count: " + count);
             }
-            return count;
-        } catch (SocketException e){
-            e.printStackTrace();
-            return -1;
-        }
+        ).start();
     }
 
-    public static boolean listenForResponse() {
+    public static void startListening(){
+        if (listener != null && listener.isAlive()) return;
         pcSocket = null;
-        AtomicBoolean bool = new AtomicBoolean(false);
-        ArrayList<Socket> sockets = new ArrayList<>();
+        listener = new Thread(ConnectionManager::listenForResponse);
+        listener.start();
+    }
+
+
+    /* PRIVATE */
+
+    private static boolean listenForResponse() {
         try (ServerSocket server = new ServerSocket(PORT)){
+            ArrayList<Socket> sockets = new ArrayList<>();
+            AtomicBoolean bool = new AtomicBoolean(false);
             while (true) {
-                try {System.out.println("Waiting...");
+                try {                                   System.out.println("Waiting...");
                     Socket client = server.accept();
-                    sockets.add(client); System.out.println("Client accepted.");
-                    Thread thread = new Thread(() -> handshake(client, server, bool));
-                    thread.start();
-                } catch (SocketException e) { //server closed by winning thread
+                    sockets.add(client);                System.out.println("Client accepted.");
+                    new Thread(() -> handshake(client, server, bool)).start();
+                } catch (SocketException e) {           System.out.println("Server closed.");
                     for (Socket s : sockets) {
                         if (s != pcSocket) try { s.close(); } catch (IOException ignored) {}; //this should kill every thread with SocketException
                     }
@@ -103,5 +106,22 @@ public class ConnectionManager {
             e.printStackTrace();
             try { socket.close(); } catch (IOException ignored) {}
         }
+    }
+
+    private static int broadcastTo(NetworkInterface networkInterface, DatagramSocket socket){
+        int count = 0;
+        for (InterfaceAddress address : networkInterface.getInterfaceAddresses()) {
+            InetAddress broadcastAddress = address.getBroadcast();
+            if (broadcastAddress instanceof Inet4Address) {
+                DatagramPacket packet = new DatagramPacket(DATA, DATA.length, broadcastAddress, PORT);
+                try {
+                    socket.send(packet);
+                    count++;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return count;
     }
 }

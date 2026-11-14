@@ -10,12 +10,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Thread listener = new Thread(ConnectionManager::listenForResponse);
-        listener.start();
-
-        findViewById(R.id.connect).setOnClickListener(  v -> {
-            Thread thread = new Thread(() -> System.out.println("Broadcast count: "  + ConnectionManager.sendBroadcast()) );
-            thread.start();
-        });
+        ConnectionManager.startListening();
+        findViewById(R.id.connect).setOnClickListener(v -> ConnectionManager.sendBroadcast());
     }
 }
