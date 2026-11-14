@@ -1,4 +1,5 @@
-﻿#include <winsock2.h>
+﻿
+#include <winsock2.h>
 #include <ws2tcpip.h>
 #include <iostream>
 
@@ -34,10 +35,10 @@ int main(int argc, char* argv[]) {
 		return 1;
     }
 
+    while (true) {}
+
     closesocket(clientSocket);
     WSACleanup();
-
-	while (true) {}
 
     return 0;
 }

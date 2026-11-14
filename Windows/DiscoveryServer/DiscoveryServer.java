@@ -23,6 +23,7 @@ public class DiscoveryServer{
 						builder.command(PATH, packet.getAddress().getHostAddress());
 						Process process = builder.start();
 						System.out.println("Started: " + process.pid());
+						System.out.println("Address: " + packet.getAddress().getHostAddress());
 					}
 				}
 				catch (IOException e) {

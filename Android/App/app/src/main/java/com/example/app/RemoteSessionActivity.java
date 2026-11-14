@@ -1,12 +1,16 @@
 package com.example.app;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 
 import androidx.activity.ComponentActivity;
 import androidx.activity.OnBackPressedCallback;
 
-    public class RemoteSessionActivity extends ComponentActivity {
+import networking.SessionManager;
+import random.SwitchActivities_Runnable;
+
+public class RemoteSessionActivity extends ComponentActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -14,5 +18,7 @@ import androidx.activity.OnBackPressedCallback;
 
         View view = new View(this);
         setContentView(view);
+
+        SessionManager.start(new SwitchActivities_Runnable(this, MainActivity.class));
     }
 }

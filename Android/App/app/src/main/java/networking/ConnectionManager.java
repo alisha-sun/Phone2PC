@@ -16,13 +16,13 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class ConnectionManager {
+public final class ConnectionManager {
     private static final int PORT = 5001; //port of ServerSocket on both devices
     private static final byte[] DATA = "PHONE2PC_DISCOVER".getBytes(StandardCharsets.UTF_8);
     private static final byte[] RESPONSE = "PHONE2PC_STOP-YELLING".getBytes(StandardCharsets.UTF_8);
 
     private static Thread listener = null;
-    private static volatile Socket pcSocket = null;
+    static volatile Socket pcSocket = null;
 
 
     /* PUBLIC */
@@ -56,15 +56,15 @@ public class ConnectionManager {
     /* PRIVATE */
 
     private static boolean listenForResponse() {
-        try (ServerSocket server = new ServerSocket(PORT)){
+        try (ServerSocket server = new ServerSocket(PORT)){     System.out.println("Waiting...");
             ArrayList<Socket> sockets = new ArrayList<>();
             AtomicBoolean bool = new AtomicBoolean(false);
             while (true) {
-                try {                                   System.out.println("Waiting...");
+                try {
                     Socket client = server.accept();
-                    sockets.add(client);                System.out.println("Client accepted.");
+                    sockets.add(client);                        System.out.println("Client accepted.");
                     new Thread(() -> handshake(client, server, bool)).start();
-                } catch (SocketException e) {           System.out.println("Server closed.");
+                } catch (SocketException e) {                   System.out.println("Server closed.");
                     for (Socket s : sockets) {
                         if (s != pcSocket) try { s.close(); } catch (IOException ignored) {}; //this should kill every thread with SocketException
                     }
@@ -99,7 +99,7 @@ public class ConnectionManager {
                 }
             }
             socket.close();
-        }catch (SocketException e){
+        } catch (SocketException e){
             System.out.println("Thread terminated.");
         }
         catch (IOException e){
