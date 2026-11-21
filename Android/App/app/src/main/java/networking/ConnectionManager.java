@@ -1,15 +1,7 @@
 package networking;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.InterfaceAddress;
-import java.net.NetworkInterface;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketException;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,7 +14,6 @@ public final class ConnectionManager {
     private static final byte[] RESPONSE = "PHONE2PC_STOP-YELLING".getBytes(StandardCharsets.UTF_8);
 
     private static Thread listener = null;
-    static volatile Socket pcSocket = null;
 
 
     /* PUBLIC */
@@ -47,7 +38,7 @@ public final class ConnectionManager {
 
     public static void startListening(Runnable onSuccess){
         if (listener != null && listener.isAlive()) return;
-        pcSocket = null;
+        SessionManager.socket = null;
         listener = new Thread(() -> { if (ConnectionManager.listenForResponse()) onSuccess.run(); });
         listener.start();
     }
@@ -66,9 +57,9 @@ public final class ConnectionManager {
                     new Thread(() -> handshake(client, server, bool)).start();
                 } catch (SocketException e) {                   System.out.println("Server closed.");
                     for (Socket s : sockets) {
-                        if (s != pcSocket) try { s.close(); } catch (IOException ignored) {}; //this should kill every thread with SocketException
+                        if (s != SessionManager.socket) try { s.close(); } catch (IOException ignored) {}; //this should kill every thread with SocketException
                     }
-                    return pcSocket != null;
+                    return SessionManager.socket != null;
                 }
             }
         }
@@ -93,7 +84,7 @@ public final class ConnectionManager {
 
             if (totalRead == RESPONSE.length && Arrays.equals(RESPONSE, buffer)) {
                 if (bool.compareAndSet(false, true)) {
-                    pcSocket = socket;
+                    SessionManager.socket = socket;
                     server.close();
                     return;
                 }

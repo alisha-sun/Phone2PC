@@ -12,7 +12,7 @@ int main(int argc, char* argv[]) {
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
 
-    SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP); // SOCKET is a file descriptor for the socket ?
 
     sockaddr_in address{};
     address.sin_family = AF_INET;

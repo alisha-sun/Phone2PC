@@ -1,16 +1,14 @@
 package networking;
 
-import android.content.Intent;
-
-import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.SocketException;
+import java.net.Socket;
 
 public final class SessionManager {
+    static volatile Socket socket = null;
     public static void start(Runnable onExit){
         new Thread(() -> {
-            try (InputStream in = ConnectionManager.pcSocket.getInputStream()) {
+            try (InputStream in = socket.getInputStream()) {
                 while (in.read() != -1) {
                     // ...
                 }
@@ -23,5 +21,11 @@ public final class SessionManager {
                 onExit.run();
             }
         }).start();
+    }
+
+    public static void closeConnection(){
+        try {
+            socket.close();
+        } catch (IOException ignored) {}
     }
 }
