@@ -13,7 +13,7 @@ public final class ConnectionManager {
     private static final byte[] DATA = "PHONE2PC_DISCOVER".getBytes(StandardCharsets.UTF_8);
     private static final byte[] RESPONSE = "PHONE2PC_STOP-YELLING".getBytes(StandardCharsets.UTF_8);
 
-    private static Thread listener = null;
+    private static ResponseListener listener = null;
 
 
     /* PUBLIC */
@@ -39,66 +39,12 @@ public final class ConnectionManager {
     public static void startListening(Runnable onSuccess){
         if (listener != null && listener.isAlive()) return;
         SessionManager.socket = null;
-        listener = new Thread(() -> { if (ConnectionManager.listenForResponse()) onSuccess.run(); });
+        listener = new ResponseListener(onSuccess);
         listener.start();
     }
 
 
     /* PRIVATE */
-
-    private static boolean listenForResponse() {
-        try (ServerSocket server = new ServerSocket(PORT)){     System.out.println("Waiting...");
-            ArrayList<Socket> sockets = new ArrayList<>();
-            AtomicBoolean bool = new AtomicBoolean(false);
-            while (true) {
-                try {
-                    Socket client = server.accept();
-                    sockets.add(client);                        System.out.println("Client accepted.");
-                    new Thread(() -> handshake(client, server, bool)).start();
-                } catch (SocketException e) {                   System.out.println("Server closed.");
-                    for (Socket s : sockets) {
-                        if (s != SessionManager.socket) try { s.close(); } catch (IOException ignored) {}; //this should kill every thread with SocketException
-                    }
-                    return SessionManager.socket != null;
-                }
-            }
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-    private static void handshake(Socket socket, ServerSocket server, AtomicBoolean bool){
-        try {
-            InputStream input = socket.getInputStream();
-            byte[] buffer = new byte[RESPONSE.length];
-
-            int totalRead = 0;
-            while (totalRead < buffer.length) {
-                int bytesRead = input.read(buffer, totalRead, buffer.length - totalRead);
-
-                if (bytesRead == -1) break;
-
-                totalRead += bytesRead;
-            }
-
-            if (totalRead == RESPONSE.length && Arrays.equals(RESPONSE, buffer)) {
-                if (bool.compareAndSet(false, true)) {
-                    SessionManager.socket = socket;
-                    server.close();
-                    return;
-                }
-            }
-            socket.close();
-        } catch (SocketException e){
-            System.out.println("Thread terminated.");
-        }
-        catch (IOException e){
-            e.printStackTrace();
-            try { socket.close(); } catch (IOException ignored) {}
-        }
-    }
-
     private static int broadcastTo(NetworkInterface networkInterface, DatagramSocket socket){
         int count = 0;
         for (InterfaceAddress address : networkInterface.getInterfaceAddresses()) {
@@ -114,5 +60,77 @@ public final class ConnectionManager {
             }
         }
         return count;
+    }
+
+    private static class ResponseListener extends Thread{
+        private ServerSocket server;
+        private final AtomicBoolean bool;
+        private final Runnable onSuccess;
+
+        public ResponseListener(Runnable onSuccess){
+            this.onSuccess = onSuccess;
+            this.bool = new AtomicBoolean(false);
+        }
+
+        @Override
+        public void run() {
+            try (ServerSocket temp = new ServerSocket(PORT)) {
+                server = temp;
+                ArrayList<Socket> sockets = new ArrayList<>();
+                while (true) {
+                    System.out.println("Waiting...");
+                    try {
+                        Socket client = server.accept();
+                        sockets.add(client);
+                        System.out.println("Client accepted.");
+                        new Thread(() -> handshake(client)).start();
+                    } catch (SocketException e) {
+                        System.out.println("Server closed.");
+                        for (Socket s : sockets) {
+                            if (s != SessionManager.socket) try { s.close(); } catch (IOException ignored) {}
+                            //this should kill every thread with SocketException
+                        }
+                        break;
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace(); //server failed to start
+            }
+
+            if (SessionManager.socket != null) onSuccess.run();
+        }
+
+        private void handshake(Socket socket){
+            try {
+                InputStream input = socket.getInputStream();
+                byte[] buffer = new byte[RESPONSE.length];
+
+                int totalRead = 0;
+                while (totalRead < buffer.length) {
+                    int bytesRead = input.read(buffer, totalRead, buffer.length - totalRead);
+
+                    if (bytesRead == -1) break;
+
+                    totalRead += bytesRead;
+                }
+
+                if (totalRead == RESPONSE.length && Arrays.equals(RESPONSE, buffer)) {
+                    if (bool.compareAndSet(false, true)) {
+                        SessionManager.socket = socket;
+                        server.close();
+                        return;
+                    }
+                }
+                socket.close();
+            } catch (SocketException e){
+                System.out.println("Thread terminated.");
+            }
+            catch (IOException e){
+                e.printStackTrace();
+                try { socket.close(); } catch (IOException ignored) {}
+            }
+        }
     }
 }
