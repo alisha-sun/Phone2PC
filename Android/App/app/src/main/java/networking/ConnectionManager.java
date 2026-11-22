@@ -38,13 +38,13 @@ public final class ConnectionManager {
 
     public static void startListening(Runnable onSuccess){
         if (listener != null && listener.isAlive()) return;
-        SessionManager.socket = null;
         listener = new ResponseListener(onSuccess);
         listener.start();
     }
 
 
     /* PRIVATE */
+
     private static int broadcastTo(NetworkInterface networkInterface, DatagramSocket socket){
         int count = 0;
         for (InterfaceAddress address : networkInterface.getInterfaceAddresses()) {
@@ -64,12 +64,18 @@ public final class ConnectionManager {
 
     private static class ResponseListener extends Thread{
         private ServerSocket server;
-        private final AtomicBoolean bool;
+        private final AtomicBoolean connectionEstablished;
         private final Runnable onSuccess;
 
         public ResponseListener(Runnable onSuccess){
             this.onSuccess = onSuccess;
-            this.bool = new AtomicBoolean(false);
+            this.connectionEstablished = new AtomicBoolean(false);
+        }
+
+        @Override
+        public void start() {
+            SessionManager.socket = null;
+            super.start();
         }
 
         @Override
@@ -117,7 +123,7 @@ public final class ConnectionManager {
                 }
 
                 if (totalRead == RESPONSE.length && Arrays.equals(RESPONSE, buffer)) {
-                    if (bool.compareAndSet(false, true)) {
+                    if (connectionEstablished.compareAndSet(false, true)) {
                         SessionManager.socket = socket;
                         server.close();
                         return;
